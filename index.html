@@ -50,6 +50,50 @@
             z-index: 0;
         }
 
+        /* ===== TOAST NOTIFICATION ===== */
+        .toast-notification {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-30px);
+            background: #000000;
+            border: 1px solid #333333;
+            border-radius: 14px;
+            padding: 12px 20px;
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s ease, transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            white-space: nowrap;
+            max-width: 90vw;
+        }
+        .toast-notification.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+            pointer-events: auto;
+        }
+        .toast-notification .toast-icon {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+        .toast-notification .toast-icon img {
+            width: 100%;
+            height: 100%;
+            filter: invert(1);
+        }
+        .toast-notification .toast-text {
+            color: #ffffff;
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+        /* ===== END TOAST NOTIFICATION ===== */
+
         /* ===== TOP EDGE BARRIER: small strip at top to clip chat bubbles ===== */
         .top-edge-barrier {
             position: fixed;
@@ -787,7 +831,7 @@
             display: flex;
             flex-direction: column;
             gap: 20px;
-            scroll-behavior: smooth;
+            scroll-behavior: auto;
             padding-top: 4px;
         }
  
@@ -913,6 +957,7 @@
             border: 1px solid #394174;
             align-items: center;
             position: relative;
+            flex-shrink: 0;
         }
         .input-area input {
             flex: 1;
@@ -1782,10 +1827,19 @@
             color: #1a5c22;
         }
     </style>
+<base target="_blank">
 </head>
 <body>
  
 <canvas id="starfield"></canvas>
+
+<!-- Toast Notification -->
+<div class="toast-notification" id="toastNotification">
+    <div class="toast-icon">
+        <img src="https://www.svgrepo.com/show/496675/tick-square.svg" alt="check">
+    </div>
+    <span class="toast-text" id="toastText"></span>
+</div>
 
 <!-- Top edge barrier to clip chat bubbles -->
 <div class="top-edge-barrier"></div>
@@ -1920,8 +1974,8 @@
             <div class="custom-name-wrapper">
                 <input class="custom-name-input" type="text" id="customNameInput" data-i18n-placeholder="custom_name_placeholder" placeholder="Masukkan nama kamu..." autocomplete="off" maxlength="40">
                 <div class="custom-name-actions" id="customNameActions">
-                    <button class="custom-name-save" id="customNameSave" data-i18n="custom_name_save">Simpan / Save</button>
-                    <button class="custom-name-cancel" id="customNameCancel" data-i18n="custom_name_cancel">Batal / Cancel</button>
+                    <button class="custom-name-save" id="customNameSave" data-i18n="custom_name_save">Simpan</button>
+                    <button class="custom-name-cancel" id="customNameCancel" data-i18n="custom_name_cancel">Batal</button>
                 </div>
             </div>
         </div>
@@ -2085,6 +2139,20 @@
         });
     }
  
+    // ===== TOAST NOTIFICATION =====
+    const toastNotification = document.getElementById('toastNotification');
+    const toastText = document.getElementById('toastText');
+    let toastTimeout = null;
+
+    function showToast(message) {
+        toastText.textContent = message;
+        toastNotification.classList.add('show');
+        if (toastTimeout) clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+            toastNotification.classList.remove('show');
+        }, 2500);
+    }
+ 
     // ===== CUSTOM POPUP =====
     const customPopupOverlay = document.getElementById('customPopupOverlay');
     const customPopupTitle = document.getElementById('customPopupTitle');
@@ -2119,9 +2187,9 @@
                 customPopupInput.removeEventListener('keydown', onKeydown);
                 resolve(val);
             }
-            function onConfirm() { cleanup(customPopupInput.value.trim()); }
-            function onCancel() { cleanup(null); }
-            function onKeydown(e) { if (e.key === 'Enter') onConfirm(); if (e.key === 'Escape') onCancel(); }
+            function onConfirm(e) { e && e.stopPropagation(); cleanup(customPopupInput.value.trim()); }
+            function onCancel(e) { e && e.stopPropagation(); cleanup(null); }
+            function onKeydown(e) { if (e.key === 'Enter') onConfirm(e); if (e.key === 'Escape') onCancel(e); }
  
             customPopupConfirm.addEventListener('click', onConfirm);
             customPopupCancel.addEventListener('click', onCancel);
@@ -2144,8 +2212,8 @@
                 confirmDeleteClose.removeEventListener('click', onCancel);
                 resolve(val);
             }
-            function onConfirm() { cleanup(true); }
-            function onCancel() { cleanup(false); }
+            function onConfirm(e) { e && e.stopPropagation(); cleanup(true); }
+            function onCancel(e) { e && e.stopPropagation(); cleanup(false); }
 
             confirmDeleteConfirm.addEventListener('click', onConfirm);
             confirmDeleteCancel.addEventListener('click', onCancel);
@@ -2381,8 +2449,8 @@
             tanya_subzero: "Tanya Subzero",
             custom_name_label: "\u{1F464} KUSTOM NAMA / CUSTOM NAME",
             custom_name_placeholder: "Masukkan nama kamu...",
-            custom_name_save: "Simpan / Save",
-            custom_name_cancel: "Batal / Cancel",
+            custom_name_save: "Simpan",
+            custom_name_cancel: "Batal",
             emoji_level_label: "\u{1F604} EMOJI",
             emoji_level_desc: "Pilih frekuensi penggunaan emoji AI",
             emoji_high: "\u{1F525} Lebih Banyak",
@@ -2390,7 +2458,9 @@
             emoji_low: "\u{1F92B} Lebih Sedikit",
             delete_confirm: "Hapus percakapan?",
             delete_btn: "Hapus",
-            cancel_btn: "Batal"
+            cancel_btn: "Batal",
+            personalization_saved: "Personalisasi baru telah disimpan!",
+            text_copied: "Teks telah disalin!"
         },
         en: {
             custom_theme: "\u{1F3A8} THEME", dark_mode: "\u{1F319} Dark Mode", light_mode: "\u2609\uFE0F Light Mode",
@@ -2427,8 +2497,8 @@
             tanya_subzero: "Ask Subzero",
             custom_name_label: "\u{1F464} CUSTOM NAME / KUSTOM NAMA",
             custom_name_placeholder: "Enter your name...",
-            custom_name_save: "Save / Simpan",
-            custom_name_cancel: "Cancel / Batal",
+            custom_name_save: "Save",
+            custom_name_cancel: "Cancel",
             emoji_level_label: "\u{1F604} EMOJI",
             emoji_level_desc: "Choose AI emoji frequency",
             emoji_high: "\u{1F525} More",
@@ -2436,7 +2506,9 @@
             emoji_low: "\u{1F92B} Less",
             delete_confirm: "Delete conversation?",
             delete_btn: "Delete",
-            cancel_btn: "Cancel"
+            cancel_btn: "Cancel",
+            personalization_saved: "New personalization has been saved!",
+            text_copied: "Text has been copied!"
         }
     };
  
@@ -2630,6 +2702,8 @@
         });
     });
  
+    // ===== TOAST NOTIFICATION REPLACES addSystemMessage for save/copy =====
+    // addSystemMessage kept for other potential uses but not used for personalization saved
     function addSystemMessage(text) {
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message ai-msg';
@@ -2668,6 +2742,7 @@
                 const plainText = msgDiv.innerText || msgDiv.textContent || '';
                 navigator.clipboard.writeText(plainText).then(() => {
                     copyBtn.innerHTML = `<img src="https://www.svgrepo.com/show/495197/copy-success.svg" alt="copied">`;
+                    showToast(t('text_copied'));
                     setTimeout(() => {
                         copyBtn.innerHTML = `<img src="https://www.svgrepo.com/show/495196/copy.svg" alt="copy">`;
                     }, 2000);
@@ -2713,6 +2788,7 @@
                 const plainText = msgDiv.textContent || '';
                 navigator.clipboard.writeText(plainText).then(() => {
                     copyBtn.innerHTML = `<img src="https://www.svgrepo.com/show/495197/copy-success.svg" alt="copied">`;
+                    showToast(t('text_copied'));
                     setTimeout(() => {
                         copyBtn.innerHTML = `<img src="https://www.svgrepo.com/show/495196/copy.svg" alt="copy">`;
                     }, 2000);
@@ -3107,7 +3183,7 @@
     saveAdminBtn.addEventListener('click', () => {
         currentSystemPrompt = sysPromptInput.value.trim();
         saveConfigForUser();
-        addSystemMessage("Konfigurasi baru aktif.");
+        showToast(t('personalization_saved'));
     });
  
     logoutBtn.addEventListener('click', async () => {
@@ -3211,24 +3287,65 @@
         recognition.onend = () => { micBtn.style.opacity = ''; };
     });
  
-    // Mobile keyboard fix
+    // Mobile keyboard fix - using visualViewport API for reliability
     const inputArea = document.getElementById('inputArea');
     if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        // Use visualViewport API if available for better accuracy
+        if (window.visualViewport) {
+            let vvHeight = window.visualViewport.height;
+            function onVisualViewportResize() {
+                const newHeight = window.visualViewport.height;
+                const offsetTop = window.visualViewport.offsetTop;
+                
+                // Only adjust if keyboard actually changed the visible height significantly
+                if (Math.abs(newHeight - vvHeight) > 100) {
+                    vvHeight = newHeight;
+                    // Scroll input into view smoothly
+                    setTimeout(() => {
+                        inputArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 50);
+                }
+            }
+            window.visualViewport.addEventListener('resize', onVisualViewportResize);
+            window.visualViewport.addEventListener('scroll', onVisualViewportResize);
+        }
+        
+        // Fallback resize handler
+        let lastWindowHeight = window.innerHeight;
         window.addEventListener('resize', () => {
             const currentHeight = window.innerHeight;
-            const screenHeight = screen.height;
-            if (currentHeight < screenHeight * 0.75) {
-                inputArea.style.position = 'fixed';
-                inputArea.style.bottom = '10px';
-                inputArea.style.left = '16px';
-                inputArea.style.right = '16px';
-                inputArea.style.zIndex = '25';
-            } else {
-                inputArea.style.position = '';
-                inputArea.style.bottom = '';
-                inputArea.style.left = '';
-                inputArea.style.right = '';
-                inputArea.style.zIndex = '';
+            // Only act if height changed significantly (keyboard open/close)
+            if (Math.abs(currentHeight - lastWindowHeight) > 100) {
+                lastWindowHeight = currentHeight;
+                const screenHeight = screen.height;
+                if (currentHeight < screenHeight * 0.75) {
+                    inputArea.style.position = 'fixed';
+                    inputArea.style.bottom = '10px';
+                    inputArea.style.left = '16px';
+                    inputArea.style.right = '16px';
+                    inputArea.style.zIndex = '25';
+                    inputArea.style.marginTop = '0';
+                } else {
+                    inputArea.style.position = '';
+                    inputArea.style.bottom = '';
+                    inputArea.style.left = '';
+                    inputArea.style.right = '';
+                    inputArea.style.zIndex = '';
+                    inputArea.style.marginTop = '';
+                }
+            }
+        });
+        
+        // Prevent scroll jump on input clear
+        userInput.addEventListener('input', () => {
+            if (userInput.value.trim() === '') {
+                // Small delay to let browser settle, then prevent scroll
+                requestAnimationFrame(() => {
+                    document.body.style.overflow = 'hidden';
+                    requestAnimationFrame(() => {
+                        document.body.style.overflow = '';
+                    });
+                });
             }
         });
     }
