@@ -3032,12 +3032,18 @@
  
     // ===== CALL AI WITH CONVERSATION HISTORY + STREAMING =====
     async function callGroqAI(userText, onStreamChunk) {
+        // STOP ASLI: Buat AbortController SEBELUM delay agar stop berfungsi sejak awal
+        currentAbortController = new AbortController();
+        
         // 2-second delay for thinking mode to simulate "AI thinking"
         if (currentMode === 'thinking') {
             await new Promise(resolve => setTimeout(resolve, 2000));
+            // STOP ASLI: Cek jika user menekan stop selama delay
+            if (currentAbortController.signal.aborted) {
+                throw new DOMException('Aborted', 'AbortError');
+            }
         }
 
-        currentAbortController = new AbortController();
         const endpoint = 'https://subzero-backend-production-f8be.up.railway.app/chat';
         const headers = { "Content-Type": "application/json" };
 
